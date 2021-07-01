@@ -1,0 +1,17 @@
+Source: rtl88x2bu
+Section: kernel
+Priority: optional
+Maintainer: Brendon Jones <brendonj@waikato.ac.nz>
+Build-Depends: debhelper (>= 10), dkms
+Standards-Version: 3.9.6
+Homepage: http://www.realtek.com.tw/
+Vcs-Git: https://github.com/wandpackaging/rtl88x2bu-debian.git
+Vcs-Browser: https://github.com/wandpackaging/rtl88x2bu-debian
+
+Package: rtl88x2bu-dkms
+Architecture: all
+Depends: ${misc:Depends}, dkms, linux-libc-dev, libc6-dev, bc
+Description: dkms source for the rtl88x2bu network driver
+ rtl88x2bu is the driver for the Realtek RTL88X2BU USB wifi controller.
+ .
+ This package provides the dkms source code for the rtl88x2bu kernel module.

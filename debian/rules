@@ -1,0 +1,22 @@
+#!/usr/bin/make -f
+
+VERSION := $(shell dpkg-parsechangelog | sed -nr '/^Version:/s/Version: (.*:)?(.*)-(.*)/\2/p')
+
+%:
+	dh $@ --with dkms
+
+override_dh_install:
+	find rtl88x2bu/ -type f -exec chmod 644 {} \;
+	dh_install rtl88x2bu/* usr/src/rtl88x2bu-$(VERSION)/
+
+override_dh_dkms:
+	dh_dkms -V $(VERSION)
+
+override_dh_builddeb:
+	dh_builddeb -- -Zgzip
+
+override_dh_auto_configure:
+override_dh_auto_build:
+override_dh_auto_test:
+override_dh_auto_install:
+override_dh_auto_c:

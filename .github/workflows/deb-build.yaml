@@ -1,0 +1,86 @@
+name: Packaging for Debian and Ubuntu
+
+on:
+  workflow_dispatch:
+  release:
+    types:
+      - published
+
+env:
+  DEBIAN_FRONTEND: noninteractive
+  DEBEMAIL: "brendonj@waikato.ac.nz"
+  DEBFULLNAME: "Brendon Jones"
+
+jobs:
+  debian-package:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - arm/v7
+        target:
+          - { distro: raspbian, codename: buster }
+
+    env:
+      DIRNAME: ${{ matrix.target.distro }}_${{ matrix.target.codename }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+        with:
+          submodules: true
+
+      - name: Set up qemu
+        id: qemu
+        uses: docker/setup-qemu-action@v1
+        with:
+          platforms: all
+
+      - name: Set docker image
+        if: ${{ matrix.target.distro == 'raspbian' }}
+        run: |
+          echo "DOCKER_IMAGE=balenalib/raspberry-pi-python:3-${{ matrix.target.codename }}" >> $GITHUB_ENV
+
+      - name: Set docker image
+        if: ${{ matrix.target.distro != 'raspbian' }}
+        run: |
+          echo "DOCKER_IMAGE=${{ matrix.target.distro }}:${{ matrix.target.codename }}" >> $GITHUB_ENV
+
+      - name: Build packages
+        run: |
+          docker run --rm \
+            --sysctl net.ipv6.conf.all.disable_ipv6=0 \
+            -e DEBIAN_FRONTEND \
+            -e CI \
+            -e GITHUB_ACTIONS \
+            -e GITHUB_WORKSPACE \
+            -e DEBEMAIL \
+            -e DEBFULLNAME \
+            -e DIRNAME \
+            -v "${GITHUB_WORKSPACE}:${GITHUB_WORKSPACE}" \
+            -w "${GITHUB_WORKSPACE}" \
+            --platform linux/${{ matrix.arch }} \
+            ${{ env.DOCKER_IMAGE }} \
+            sh -c "./debpkg-setup.sh && ./debpkg-build.sh && mkdir -p packages/${DIRNAME} && cp ../*.deb packages/${DIRNAME}/"
+
+      - name: Run packaging tests
+        run: |
+          sudo apt-get install -y lintian
+          lintian packages/${DIRNAME}/*.deb
+
+      - name: Store artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ matrix.target.distro }} ${{ matrix.target.codename }} packages
+          path: packages/
+          retention-days: 7
+
+      - name: Publish packages to cloudsmith
+        if: ${{ github.event_name == 'release' }}
+        uses: wanduow/action-cloudsmith-upload-packages@v1
+        with:
+          path: packages/
+          repo: ${{ secrets.CLOUDSMITH_OWNER }}/rtl88x2bu
+          username: ${{ secrets.CLOUDSMITH_USERNAME }}
+          api_key: ${{ secrets.CLOUDSMITH_API_KEY }}

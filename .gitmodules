@@ -1,0 +1,3 @@
+[submodule "rtl88x2bu"]
+	path = rtl88x2bu
+	url = https://github.com/cilynx/rtl88x2bu
